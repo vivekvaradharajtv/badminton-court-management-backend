@@ -16,9 +16,14 @@ const errorHandler_1 = require("./middleware/errorHandler");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-// Health check (no auth required)
+// Health check (no auth required) – for load balancers / Railway
 app.get('/health', (_req, res) => {
-    res.json({ success: true, message: 'OK' });
+    res.status(200).json({
+        success: true,
+        status: 'ok',
+        message: 'OK',
+        timestamp: new Date().toISOString(),
+    });
 });
 app.use('/auth', auth_1.default);
 app.use('/courts', courts_1.default);

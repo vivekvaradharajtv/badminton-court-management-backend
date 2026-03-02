@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth';
 import courtRoutes from './routes/courts';
@@ -14,9 +14,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Health check (no auth required)
-app.get('/health', (_req, res) => {
-  res.json({ success: true, message: 'OK' });
+// Health check (no auth required) – for load balancers / Railway
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    status: 'ok',
+    message: 'OK',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 app.use('/auth', authRoutes);
