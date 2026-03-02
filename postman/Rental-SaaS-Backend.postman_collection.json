@@ -442,10 +442,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"opening_time\": \"06:00\",\n  \"closing_time\": \"22:00\",\n  \"slot_duration\": 60\n}"
+              "raw": "{\n  \"opening_time\": \"06:00\",\n  \"closing_time\": \"22:00\",\n  \"slot_duration\": 60,\n  \"confirmed\": false\n}"
             },
             "url": "{{baseUrl}}/academy/settings",
-            "description": "opening_time/closing_time HH:mm. slot_duration in minutes (5-240)."
+            "description": "opening_time/closing_time HH:mm; slot_duration in minutes (5-240). If new hours would put existing activities outside work hours, API returns 400 with requiresConfirmation and conflictingActivities; resend with confirmed: true to apply anyway."
           }
         }
       ]
