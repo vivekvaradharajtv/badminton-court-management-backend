@@ -1,7 +1,8 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import * as authService from '../services/authService';
 import { authMiddleware } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const loginValidation = [
 router.post(
   '/register',
   registerValidation,
-  async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({
@@ -45,15 +46,15 @@ router.post(
         res.status(400).json({ success: false, message: e.message, code: 'EMAIL_EXISTS' });
         return;
       }
-      throw err;
+      next(err);
     }
-  }
+  })
 );
 
 router.post(
   '/login',
   loginValidation,
-  async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({
@@ -76,22 +77,26 @@ router.post(
         res.status(401).json({ success: false, message: e.message, code: 'INVALID_CREDENTIALS' });
         return;
       }
-      throw err;
+      next(err);
     }
-  }
+  })
 );
 
-router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<void> => {
-  if (!req.user) {
-    res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
-    return;
-  }
-  const user = await authService.getMe(req.user.userId);
-  if (!user) {
-    res.status(404).json({ success: false, message: 'User not found', code: 'NOT_FOUND' });
-    return;
-  }
-  res.json({ success: true, user });
-});
+router.get(
+  '/me',
+  authMiddleware,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
+      return;
+    }
+    const user = await authService.getMe(req.user.userId);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found', code: 'NOT_FOUND' });
+      return;
+    }
+    res.json({ success: true, user });
+  })
+);
 
 export default router;
