@@ -1,4 +1,85 @@
 import { prisma } from '../lib/prisma';
+import * as academyService from './academyService';
+
+const DEFAULT_OPENING = '06:00';
+const DEFAULT_CLOSING = '22:00';
+const DEFAULT_SLOT_MINS = 60;
+
+/** Parse "HH:mm" or "H:mm" to minutes since midnight */
+function timeToMinutes(t: string): number {
+  const [h, m] = t.trim().split(':').map((s) => parseInt(s, 10));
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+/** Minutes since midnight to "HH:mm" */
+function minutesToTime(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+export interface CourtSlot {
+  start_time: string;
+  end_time: string;
+  activity: { id: string; name: string | null } | null;
+}
+
+export interface CourtSlotsResult {
+  court: { id: string; name: string };
+  date: string;
+  slots: CourtSlot[];
+}
+
+export async function getCourtSlots(
+  courtId: string,
+  academyId: string,
+  date?: Date
+): Promise<CourtSlotsResult | null> {
+  const court = await getCourtById(courtId, academyId);
+  if (!court) return null;
+
+  const settings = await academyService.getAcademySettings(academyId);
+  const opening = settings?.opening_time ?? DEFAULT_OPENING;
+  const closing = settings?.closing_time ?? DEFAULT_CLOSING;
+  const slotMins = settings?.slot_duration ?? DEFAULT_SLOT_MINS;
+
+  const openMins = timeToMinutes(opening);
+  const closeMins = timeToMinutes(closing);
+
+  const activities = await prisma.activity.findMany({
+    where: { courtId, academyId, isActive: true },
+    select: { id: true, name: true, startTime: true, endTime: true },
+  });
+
+  const slots: CourtSlot[] = [];
+  for (let m = openMins; m + slotMins <= closeMins; m += slotMins) {
+    const slotStart = m;
+    const slotEnd = m + slotMins;
+    let activity: CourtSlot['activity'] = null;
+    for (const a of activities) {
+      const aStart = timeToMinutes(a.startTime);
+      const aEnd = timeToMinutes(a.endTime);
+      if (slotStart < aEnd && slotEnd > aStart) {
+        activity = { id: a.id, name: a.name };
+        break;
+      }
+    }
+    slots.push({
+      start_time: minutesToTime(slotStart),
+      end_time: minutesToTime(slotEnd),
+      activity,
+    });
+  }
+
+  const d = date ?? new Date();
+  const dateStr = d.toISOString().slice(0, 10);
+
+  return {
+    court: { id: court.id, name: court.name },
+    date: dateStr,
+    slots,
+  };
+}
 
 export interface CreateCourtInput {
   academyId: string;

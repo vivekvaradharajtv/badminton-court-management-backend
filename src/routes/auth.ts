@@ -11,6 +11,8 @@ const registerValidation = [
   body('name').trim().notEmpty().withMessage('name is required'),
   body('email').trim().isEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('openingTime').optional().trim().matches(/^\d{1,2}:\d{2}$/).withMessage('openingTime must be HH:mm'),
+  body('closingTime').optional().trim().matches(/^\d{1,2}:\d{2}$/).withMessage('closingTime must be HH:mm'),
 ];
 
 const loginValidation = [
@@ -38,6 +40,8 @@ router.post(
         name: req.body.name,
         email: req.body.email,
         password: req.body.password,
+        openingTime: req.body.openingTime,
+        closingTime: req.body.closingTime,
       });
       res.status(201).json({ success: true, ...result });
     } catch (err) {
@@ -90,12 +94,12 @@ router.get(
       res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
       return;
     }
-    const user = await authService.getMe(req.user.userId);
-    if (!user) {
+    const profile = await authService.getMe(req.user.userId);
+    if (!profile) {
       res.status(404).json({ success: false, message: 'User not found', code: 'NOT_FOUND' });
       return;
     }
-    res.json({ success: true, user });
+    res.json({ success: true, profile });
   })
 );
 

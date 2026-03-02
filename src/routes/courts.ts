@@ -67,6 +67,32 @@ router.get(
 );
 
 router.get(
+  '/:id/slots',
+  [
+    param('id').isUUID().withMessage('Invalid court id'),
+    query('date').optional().isISO8601().toDate().withMessage('date must be YYYY-MM-DD'),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
+      return;
+    }
+    const dateParam = req.query.date;
+    const date = dateParam ? new Date(dateParam as string) : undefined;
+    const result = await courtService.getCourtSlots(
+      req.params.id,
+      req.user.academyId,
+      date
+    );
+    if (!result) {
+      res.status(404).json({ success: false, message: 'Court not found', code: 'NOT_FOUND' });
+      return;
+    }
+    res.json({ success: true, ...result });
+  }
+);
+
+router.get(
   '/:id',
   [param('id').isUUID().withMessage('Invalid court id')],
   async (req: Request, res: Response): Promise<void> => {

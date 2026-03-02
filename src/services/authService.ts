@@ -17,6 +17,8 @@ export interface RegisterInput {
   name: string;
   email: string;
   password: string;
+  openingTime?: string;
+  closingTime?: string;
 }
 
 export interface LoginInput {
@@ -51,8 +53,8 @@ export async function register(input: RegisterInput): Promise<AuthResult> {
   const academy = await prisma.academy.create({
     data: {
       name: input.academyName,
-      openingTime: DEFAULT_OPENING_TIME,
-      closingTime: DEFAULT_CLOSING_TIME,
+      openingTime: input.openingTime ?? DEFAULT_OPENING_TIME,
+      closingTime: input.closingTime ?? DEFAULT_CLOSING_TIME,
       slotDurationMins: DEFAULT_SLOT_DURATION_MINS,
     },
   });
@@ -125,7 +127,19 @@ export async function login(input: LoginInput): Promise<AuthResult> {
   };
 }
 
-export async function getMe(userId: string) {
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  academyId: string;
+  academyName: string;
+  opening_time: string | null;
+  closing_time: string | null;
+  slot_duration: number | null;
+}
+
+export async function getMe(userId: string): Promise<Profile | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -134,7 +148,14 @@ export async function getMe(userId: string) {
       email: true,
       role: true,
       academyId: true,
-      academy: { select: { name: true } },
+      academy: {
+        select: {
+          name: true,
+          openingTime: true,
+          closingTime: true,
+          slotDurationMins: true,
+        },
+      },
     },
   });
   if (!user) return null;
@@ -145,5 +166,8 @@ export async function getMe(userId: string) {
     role: user.role,
     academyId: user.academyId,
     academyName: user.academy.name,
+    opening_time: user.academy.openingTime,
+    closing_time: user.academy.closingTime,
+    slot_duration: user.academy.slotDurationMins,
   };
 }

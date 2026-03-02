@@ -57,10 +57,10 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"academyName\": \"My Academy\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"academyName\": \"My Academy\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"openingTime\": \"06:00\",\n  \"closingTime\": \"22:00\"\n}"
             },
             "url": "{{baseUrl}}/auth/register",
-            "description": "Creates academy + admin user. Returns token and user. Password min 6 chars."
+            "description": "Creates academy + admin user. openingTime/closingTime optional (HH:mm); default 06:00, 22:00."
           }
         },
         {
@@ -97,7 +97,7 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": "{{baseUrl}}/auth/me",
-            "description": "Current user. Requires Bearer token."
+            "description": "Profile: user + academy settings (opening_time, closing_time, slot_duration). Single API for current user and work hours; no need to call /academy/settings."
           }
         }
       ]
@@ -136,6 +136,23 @@
               ]
             },
             "description": "List courts for the academy. Optional: limit, offset."
+          }
+        },
+        {
+          "name": "Get Court Slots",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/courts/:id/slots?date=",
+              "host": ["{{baseUrl}}"],
+              "path": ["courts", ":id", "slots"],
+              "query": [
+                { "key": "date", "value": "", "description": "YYYY-MM-DD (optional, default today)" }
+              ],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "description": "Returns slots for the court: each slot has start_time, end_time, and activity (object or null). Replace :id with court UUID."
           }
         },
         {
