@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK
+  OTHER
+}
+
+model Academy {
+  id               String   @id @default(uuid())
+  name             String
+  openingTime      String?  @map("opening_time")
+  closingTime      String?  @map("closing_time")
+  slotDurationMins Int?     @map("slot_duration")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  users          User[]           @relation("AcademyUsers")
+  courts         Court[]         @relation("AcademyCourts")
+  activities     Activity[]      @relation("AcademyActivities")
+  activityMembers ActivityMember[] @relation("AcademyActivityMembers")
+  bills          Bill[]          @relation("AcademyBills")
+  payments       Payment[]       @relation("AcademyPayments")
+}
+
+model Court {
+  id        String   @id @default(uuid())
+  academyId String   @map("academy_id")
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  academy    Academy    @relation("AcademyCourts", fields: [academyId], references: [id], onDelete: Cascade)
+  activities Activity[]
+
+  @@index([academyId])
+  @@map("courts")
+}
+
+model Activity {
+  id          String    @id @default(uuid())
+  academyId   String    @map("academy_id")
+  courtId     String    @map("court_id")
+  name        String?
+  startTime   String    @map("start_time")   // HH:mm
+  endTime     String    @map("end_time")     // HH:mm
+  startDate   DateTime  @map("start_date") @db.Date  // billing anchor
+  monthlyFee  Decimal   @map("monthly_fee") @db.Decimal(10, 2)
+  maxPlayers  Int       @map("max_players")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  academy  Academy          @relation("AcademyActivities", fields: [academyId], references: [id], onDelete: Cascade)
+  court    Court            @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  members ActivityMember[]
+  bills   Bill[]
+
+  @@index([academyId])
+  @@index([courtId])
+  @@map("activities")
+}
+
+model ActivityMember {
+  id         String   @id @default(uuid())
+  academyId  String   @map("academy_id")
+  activityId String   @map("activity_id")
+  name       String
+  phone      String?
+  isCaptain  Boolean  @default(false) @map("is_captain")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  academy  Academy  @relation("AcademyActivityMembers", fields: [academyId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([academyId])
+  @@index([activityId])
+  @@map("activity_members")
+}
+
+model Bill {
+  id         String   @id @default(uuid())
+  academyId  String   @map("academy_id")
+  activityId String   @map("activity_id")
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd   DateTime @map("period_end") @db.Date
+  amount     Decimal  @db.Decimal(10, 2)
+  totalPaid  Decimal  @default(0) @map("total_paid") @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  academy  Academy   @relation("AcademyBills", fields: [academyId], references: [id], onDelete: Cascade)
+  activity Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([academyId])
+  @@index([activityId])
+  @@index([periodStart])
+  @@map("bills")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  academyId     String        @map("academy_id")
+  billId        String        @map("bill_id")
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentDate   DateTime      @map("payment_date") @db.Date
+  paymentMethod PaymentMethod @map("payment_method")
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  academy Academy @relation("AcademyPayments", fields: [academyId], references: [id], onDelete: Cascade)
+  bill    Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([academyId])
+  @@index([billId])
+  @@map("payments")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  academyId    String   @map("academy_id")
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  academy Academy @relation("AcademyUsers", fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@index([academyId])
+  @@map("users")
+}
