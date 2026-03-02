@@ -82,7 +82,8 @@ export async function listBills(options: ListBillsOptions) {
     include: { activity: { select: { id: true, name: true } } },
   });
 
-  let withStatus = bills.map((b) => ({
+  type BillRow = (typeof bills)[number];
+  let withStatus = bills.map((b: BillRow) => ({
     ...b,
     status: deriveBillStatus(
       { amount: b.amount, totalPaid: b.totalPaid, periodStart: b.periodStart },
@@ -91,7 +92,7 @@ export async function listBills(options: ListBillsOptions) {
   }));
 
   if (status) {
-    withStatus = withStatus.filter((b) => b.status === status);
+    withStatus = withStatus.filter((b: BillRow & { status: BillStatus }) => b.status === status);
     const total = withStatus.length;
     withStatus = withStatus.slice(offset, offset + limit);
     return { bills: withStatus, total };
