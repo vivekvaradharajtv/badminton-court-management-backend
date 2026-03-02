@@ -21,6 +21,9 @@
     "jsonwebtoken": "^9.0.2",
     "prisma": "^5.22.0"
   },
+  "overrides": {
+    "tar": ">=7.5.8"
+  },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
