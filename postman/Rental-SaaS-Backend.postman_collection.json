@@ -1,0 +1,437 @@
+{
+  "info": {
+    "name": "Rental SaaS Backend",
+    "description": "API collection for the Multi-tenant Rental SaaS Backend (Auth, Courts, Activities, Members, Bills, Dashboard, Academy).\n\n**Setup:**\n1. Set `baseUrl` to your server (e.g. `http://localhost:3000` or Railway URL).\n2. Run **Auth > Login** or **Register**, then copy `token` from the response into the collection variable `token` (or use the Auth tab with Bearer token).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health & DB",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "No auth required."
+          }
+        },
+        {
+          "name": "DB Test",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/db-test",
+            "description": "Checks database connectivity. No auth required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "    pm.collectionVariables.set('token', res.token);",
+                  "    console.log('Token saved to collection variable `token`');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academyName\": \"My Academy\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register",
+            "description": "Creates academy + admin user. Returns token and user. Password min 6 chars."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "    pm.collectionVariables.set('token', res.token);",
+                  "    console.log('Token saved to collection variable `token`');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Returns token and user. Token is auto-saved to collection variable `token`."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/auth/me",
+            "description": "Current user. Requires Bearer token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Courts",
+      "item": [
+        {
+          "name": "Create Court",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Court 1\",\n  \"is_active\": true\n}"
+            },
+            "url": "{{baseUrl}}/courts",
+            "description": "Create a court. is_active optional, default true."
+          }
+        },
+        {
+          "name": "List Courts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/courts?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["courts"],
+              "query": [
+                { "key": "limit", "value": "50", "disabled": true },
+                { "key": "offset", "value": "0", "disabled": true }
+              ]
+            },
+            "description": "List courts for the academy. Optional: limit, offset."
+          }
+        },
+        {
+          "name": "Get Court by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/courts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["courts", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "description": "Replace :id with court UUID."
+          }
+        },
+        {
+          "name": "Update Court",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Court 1 Updated\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/courts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["courts", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "description": "Partial update. Replace :id with court UUID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activities",
+      "item": [
+        {
+          "name": "Create Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"court_id\": \"{{courtId}}\",\n  \"name\": \"Morning Batch\",\n  \"start_time\": \"06:00\",\n  \"end_time\": \"07:00\",\n  \"start_date\": \"2025-01-01\",\n  \"monthly_fee\": 500,\n  \"max_players\": 20,\n  \"is_active\": true\n}"
+            },
+            "url": "{{baseUrl}}/activities",
+            "description": "court_id required (UUID). start_time/end_time HH:mm, start_date YYYY-MM-DD."
+          }
+        },
+        {
+          "name": "List Activities",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/activities?court_id=&limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities"],
+              "query": [
+                { "key": "court_id", "value": "", "disabled": true },
+                { "key": "limit", "value": "50", "disabled": true },
+                { "key": "offset", "value": "0", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Activity by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/activities/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        },
+        {
+          "name": "Update Activity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Evening Batch\",\n  \"start_time\": \"18:00\",\n  \"end_time\": \"19:00\",\n  \"monthly_fee\": 600,\n  \"max_players\": 24,\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        },
+        {
+          "name": "Add Member to Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"phone\": \"+919876543210\",\n  \"is_captain\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/:id/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", ":id", "members"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "description": ":id = activity UUID. name required."
+          }
+        },
+        {
+          "name": "List Activity Members",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/activities/:id/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", ":id", "members"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Activity",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/activities/:id/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", ":id", "deactivate"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Members",
+      "item": [
+        {
+          "name": "Update Member",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Updated\",\n  \"phone\": \"+919876543211\",\n  \"is_captain\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/members/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["members", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "description": ":id = activity member UUID."
+          }
+        },
+        {
+          "name": "Delete Member",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/members/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["members", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bills",
+      "item": [
+        {
+          "name": "List Bills",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/bills?activity_id=&status=&limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["bills"],
+              "query": [
+                { "key": "activity_id", "value": "", "disabled": true },
+                { "key": "status", "value": "PAID", "disabled": true, "description": "PAID | UPCOMING | DUE | OVERDUE" },
+                { "key": "limit", "value": "50", "disabled": true },
+                { "key": "offset", "value": "0", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Bills for Activity",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/activities/:id/bills",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", ":id", "bills"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "description": ":id = activity UUID. Ensures bills exist then lists them."
+          }
+        },
+        {
+          "name": "Record Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500,\n  \"payment_date\": \"2025-03-02\",\n  \"payment_method\": \"UPI\",\n  \"notes\": \"Monthly fee\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bills/:billId/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["bills", ":billId", "payments"],
+              "variable": [{ "key": "billId", "value": "" }]
+            },
+            "description": "payment_method: CASH | UPI | BANK | OTHER. Replace :billId with bill UUID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/dashboard/summary",
+            "description": "Summary stats for the academy."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Academy",
+      "item": [
+        {
+          "name": "Get Academy Settings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/academy/settings"
+          }
+        },
+        {
+          "name": "Update Academy Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opening_time\": \"06:00\",\n  \"closing_time\": \"22:00\",\n  \"slot_duration\": 60\n}"
+            },
+            "url": "{{baseUrl}}/academy/settings",
+            "description": "opening_time/closing_time HH:mm. slot_duration in minutes (5-240)."
+          }
+        }
+      ]
+    }
+  ]
+}

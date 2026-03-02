@@ -8,6 +8,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-me';
 const JWT_EXPIRY = '7d';
 const SALT_ROUNDS = 10;
 
+const DEFAULT_OPENING_TIME = '06:00';
+const DEFAULT_CLOSING_TIME = '22:00';
+const DEFAULT_SLOT_DURATION_MINS = 60;
+
 export interface RegisterInput {
   academyName: string;
   name: string;
@@ -45,7 +49,12 @@ export async function register(input: RegisterInput): Promise<AuthResult> {
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
 
   const academy = await prisma.academy.create({
-    data: { name: input.academyName },
+    data: {
+      name: input.academyName,
+      openingTime: DEFAULT_OPENING_TIME,
+      closingTime: DEFAULT_CLOSING_TIME,
+      slotDurationMins: DEFAULT_SLOT_DURATION_MINS,
+    },
   });
 
   const user = await prisma.user.create({
