@@ -8,6 +8,7 @@ import billRoutes from './routes/bills';
 import dashboardRoutes from './routes/dashboard';
 import academyRoutes from './routes/academy';
 import { errorHandler } from './middleware/errorHandler';
+import { prisma } from './lib/prisma';
 
 const app = express();
 
@@ -22,6 +23,16 @@ app.get('/health', (_req: Request, res: Response) => {
     message: 'OK',
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get('/db-test', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ db: 'connected' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ db: 'failed' });
+  }
 });
 
 app.use('/auth', authRoutes);
