@@ -18,12 +18,40 @@ function minutesToTime(mins: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+type ActivityRow = { id: string; name: string | null; startTime: string; endTime: string; recurrenceDays: number[] };
+
+function getOccupiedAndAvailableDays(
+  slotStartMins: number,
+  slotEndMins: number,
+  activities: ActivityRow[]
+): { occupied_days: number[]; available_days: number[] } {
+  const occupiedSet = new Set<number>();
+  for (const a of activities) {
+    const aStart = timeToMinutes(String(a.startTime).trim());
+    const aEnd = timeToMinutes(String(a.endTime).trim());
+    if (slotStartMins < aEnd && slotEndMins > aStart) {
+      for (const d of a.recurrenceDays) {
+        occupiedSet.add(d);
+      }
+    }
+  }
+  const occupied_days = [...occupiedSet].sort((a, b) => a - b);
+  const available_days = ALL_DAYS.filter((d) => !occupiedSet.has(d));
+  return { occupied_days, available_days };
+}
+
 export interface CourtSlot {
   start_time: string;
   end_time: string;
   activity: { id: string; name: string | null } | null;
   /** True when this slot is outside the academy's opening_time–closing_time */
   outside_working_hours?: boolean;
+  /** Days of week (0=Sun..6=Sat) when this slot has no activity */
+  available_days: number[];
+  /** Days of week when this slot is occupied by an activity */
+  occupied_days: number[];
 }
 
 export interface CourtSlotsResult {
@@ -73,11 +101,14 @@ export async function getCourtSlots(
         break;
       }
     }
+    const { occupied_days, available_days } = getOccupiedAndAvailableDays(slotStart, slotEnd, activities);
     slots.push({
       start_time: minutesToTime(slotStart),
       end_time: minutesToTime(slotEnd),
       activity,
       outside_working_hours: false,
+      occupied_days,
+      available_days,
     });
   }
 
@@ -89,22 +120,28 @@ export async function getCourtSlots(
     if (aStart < openMins) {
       const segmentEnd = Math.min(aEnd, openMins);
       if (segmentEnd > aStart) {
+        const { occupied_days, available_days } = getOccupiedAndAvailableDays(aStart, segmentEnd, activities);
         slots.push({
           start_time: minutesToTime(aStart),
           end_time: minutesToTime(segmentEnd),
           activity: activityInfo,
           outside_working_hours: true,
+          occupied_days,
+          available_days,
         });
       }
     }
     if (aEnd > closeMins) {
       const segmentStart = Math.max(aStart, closeMins);
       if (aEnd > segmentStart) {
+        const { occupied_days, available_days } = getOccupiedAndAvailableDays(segmentStart, aEnd, activities);
         slots.push({
           start_time: minutesToTime(segmentStart),
           end_time: minutesToTime(aEnd),
           activity: activityInfo,
           outside_working_hours: true,
+          occupied_days,
+          available_days,
         });
       }
     }
