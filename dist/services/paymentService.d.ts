@@ -13,10 +13,10 @@ export declare function recordPayment(input: RecordPaymentInput): Promise<{
         id: string;
         createdAt: Date;
         amount: import("@prisma/client/runtime/library").Decimal;
+        billId: string;
         paymentDate: Date;
         paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
         notes: string | null;
-        billId: string;
     };
     bill: {
         status: import("../utils/billStatus").BillStatus;

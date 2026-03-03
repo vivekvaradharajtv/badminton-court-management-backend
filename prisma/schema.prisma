@@ -51,18 +51,19 @@ model Court {
 }
 
 model Activity {
-  id          String    @id @default(uuid())
-  academyId   String    @map("academy_id")
-  courtId     String    @map("court_id")
-  name        String?
-  startTime   String    @map("start_time")   // HH:mm
-  endTime     String    @map("end_time")     // HH:mm
-  startDate   DateTime  @map("start_date") @db.Date  // billing anchor
-  monthlyFee  Decimal   @map("monthly_fee") @db.Decimal(10, 2)
-  maxPlayers  Int       @map("max_players")
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  academyId       String    @map("academy_id")
+  courtId         String    @map("court_id")
+  name            String?
+  startTime       String    @map("start_time")   // HH:mm
+  endTime         String    @map("end_time")     // HH:mm
+  recurrenceDays  Int[]     @map("recurrence_days") // 0=Sun, 1=Mon, ... 6=Sat
+  startDate       DateTime  @map("start_date") @db.Date  // billing anchor
+  monthlyFee      Decimal   @map("monthly_fee") @db.Decimal(10, 2)
+  maxPlayers      Int       @map("max_players")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   academy  Academy          @relation("AcademyActivities", fields: [academyId], references: [id], onDelete: Cascade)
   court    Court            @relation(fields: [courtId], references: [id], onDelete: Cascade)

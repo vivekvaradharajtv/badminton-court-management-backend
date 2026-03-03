@@ -12,6 +12,14 @@ const createValidation = [
   body('name').optional().trim(),
   body('start_time').trim().notEmpty().withMessage('start_time is required (HH:mm)'),
   body('end_time').trim().notEmpty().withMessage('end_time is required (HH:mm)'),
+  body('recurrence_days')
+    .optional()
+    .isArray()
+    .withMessage('recurrence_days must be an array'),
+  body('recurrence_days.*')
+    .optional()
+    .isInt({ min: 0, max: 6 })
+    .withMessage('recurrence_days must be 0–6 (0=Sun, 6=Sat)'),
   body('start_date').isISO8601().toDate().withMessage('start_date is required (YYYY-MM-DD)'),
   body('monthly_fee').isFloat({ min: 0.01 }).withMessage('monthly_fee must be > 0'),
   body('max_players').isInt({ min: 1 }).withMessage('max_players must be > 0'),
@@ -23,6 +31,8 @@ const updateValidation = [
   body('name').optional().trim(),
   body('start_time').optional().trim().notEmpty(),
   body('end_time').optional().trim().notEmpty(),
+  body('recurrence_days').optional().isArray(),
+  body('recurrence_days.*').optional().isInt({ min: 0, max: 6 }),
   body('monthly_fee').optional().isFloat({ min: 0.01 }),
   body('max_players').optional().isInt({ min: 1 }),
   body('is_active').optional().isBoolean(),
@@ -51,6 +61,7 @@ router.post(
         name: req.body.name,
         startTime: req.body.start_time,
         endTime: req.body.end_time,
+        recurrenceDays: req.body.recurrence_days,
         startDate: new Date(req.body.start_date),
         monthlyFee: Number(req.body.monthly_fee),
         maxPlayers: Number(req.body.max_players),
@@ -128,6 +139,7 @@ router.put(
           name: req.body.name,
           startTime: req.body.start_time,
           endTime: req.body.end_time,
+          recurrenceDays: req.body.recurrence_days,
           monthlyFee: req.body.monthly_fee != null ? Number(req.body.monthly_fee) : undefined,
           maxPlayers: req.body.max_players != null ? Number(req.body.max_players) : undefined,
           isActive: req.body.is_active,

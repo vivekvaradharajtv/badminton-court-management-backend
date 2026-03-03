@@ -12,6 +12,9 @@ const prisma_1 = require("../lib/prisma");
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-me';
 const JWT_EXPIRY = '7d';
 const SALT_ROUNDS = 10;
+const DEFAULT_OPENING_TIME = '06:00';
+const DEFAULT_CLOSING_TIME = '22:00';
+const DEFAULT_SLOT_DURATION_MINS = 60;
 async function register(input) {
     const existingUser = await prisma_1.prisma.user.findUnique({
         where: { email: input.email },
@@ -23,7 +26,12 @@ async function register(input) {
     }
     const passwordHash = await bcrypt_1.default.hash(input.password, SALT_ROUNDS);
     const academy = await prisma_1.prisma.academy.create({
-        data: { name: input.academyName },
+        data: {
+            name: input.academyName,
+            openingTime: input.openingTime ?? DEFAULT_OPENING_TIME,
+            closingTime: input.closingTime ?? DEFAULT_CLOSING_TIME,
+            slotDurationMins: DEFAULT_SLOT_DURATION_MINS,
+        },
     });
     const user = await prisma_1.prisma.user.create({
         data: {
@@ -95,7 +103,14 @@ async function getMe(userId) {
             email: true,
             role: true,
             academyId: true,
-            academy: { select: { name: true } },
+            academy: {
+                select: {
+                    name: true,
+                    openingTime: true,
+                    closingTime: true,
+                    slotDurationMins: true,
+                },
+            },
         },
     });
     if (!user)
@@ -107,6 +122,9 @@ async function getMe(userId) {
         role: user.role,
         academyId: user.academyId,
         academyName: user.academy.name,
+        opening_time: user.academy.openingTime,
+        closing_time: user.academy.closingTime,
+        slot_duration: user.academy.slotDurationMins,
     };
 }
 //# sourceMappingURL=authService.js.map

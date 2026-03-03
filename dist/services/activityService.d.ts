@@ -4,6 +4,7 @@ export interface CreateActivityInput {
     name?: string;
     startTime: string;
     endTime: string;
+    recurrenceDays?: number[];
     startDate: Date;
     monthlyFee: number;
     maxPlayers: number;
@@ -13,6 +14,7 @@ export interface UpdateActivityInput {
     name?: string;
     startTime?: string;
     endTime?: string;
+    recurrenceDays?: number[];
     monthlyFee?: number;
     maxPlayers?: number;
     isActive?: boolean;
@@ -24,8 +26,8 @@ export interface ListActivitiesOptions {
     limit?: number;
     offset?: number;
 }
-/** Check if activity time range overlaps any existing activity on the same court */
-export declare function hasOverlap(courtId: string, startTime: string, endTime: string, excludeActivityId?: string): Promise<boolean>;
+/** Check if activity time range overlaps any existing activity on the same court on shared recurrence days */
+export declare function hasOverlap(courtId: string, startTime: string, endTime: string, recurrenceDays: number[], excludeActivityId?: string): Promise<boolean>;
 export declare function createActivity(input: CreateActivityInput): Promise<{
     academyId: string;
     id: string;
@@ -36,6 +38,7 @@ export declare function createActivity(input: CreateActivityInput): Promise<{
     courtId: string;
     startTime: string;
     endTime: string;
+    recurrenceDays: number[];
     startDate: Date;
     monthlyFee: import("@prisma/client/runtime/library").Decimal;
     maxPlayers: number;
@@ -56,6 +59,7 @@ export declare function listActivities(options: ListActivitiesOptions): Promise<
         courtId: string;
         startTime: string;
         endTime: string;
+        recurrenceDays: number[];
         startDate: Date;
         monthlyFee: import("@prisma/client/runtime/library").Decimal;
         maxPlayers: number;
@@ -77,6 +81,7 @@ export declare function getActivityById(id: string, academyId: string): Promise<
     courtId: string;
     startTime: string;
     endTime: string;
+    recurrenceDays: number[];
     startDate: Date;
     monthlyFee: import("@prisma/client/runtime/library").Decimal;
     maxPlayers: number;
@@ -96,6 +101,7 @@ export declare function updateActivity(id: string, academyId: string, input: Upd
     courtId: string;
     startTime: string;
     endTime: string;
+    recurrenceDays: number[];
     startDate: Date;
     monthlyFee: import("@prisma/client/runtime/library").Decimal;
     maxPlayers: number;
@@ -115,6 +121,7 @@ export declare function deactivateActivity(id: string, academyId: string): Promi
     courtId: string;
     startTime: string;
     endTime: string;
+    recurrenceDays: number[];
     startDate: Date;
     monthlyFee: import("@prisma/client/runtime/library").Decimal;
     maxPlayers: number;

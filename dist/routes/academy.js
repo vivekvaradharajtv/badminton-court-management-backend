@@ -53,6 +53,7 @@ router.put('/settings', [
     (0, express_validator_1.body)('opening_time').optional().trim().matches(/^\d{1,2}:\d{2}$/).withMessage('opening_time must be HH:mm'),
     (0, express_validator_1.body)('closing_time').optional().trim().matches(/^\d{1,2}:\d{2}$/).withMessage('closing_time must be HH:mm'),
     (0, express_validator_1.body)('slot_duration').optional().isInt({ min: 5, max: 240 }).withMessage('slot_duration must be 5-240 minutes'),
+    (0, express_validator_1.body)('confirmed').optional().isBoolean().withMessage('confirmed must be boolean'),
 ], async (req, res) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
@@ -66,16 +67,26 @@ router.put('/settings', [
     }
     if (!req.user)
         return;
-    const settings = await academyService.updateAcademySettings(req.user.academyId, {
+    const result = await academyService.updateAcademySettings(req.user.academyId, {
         opening_time: req.body.opening_time,
         closing_time: req.body.closing_time,
         slot_duration: req.body.slot_duration,
-    });
-    if (!settings) {
+    }, { confirmed: req.body.confirmed === true });
+    if (!result) {
         res.status(404).json({ success: false, message: 'Academy not found', code: 'NOT_FOUND' });
         return;
     }
-    res.json({ success: true, settings });
+    if (result.updated) {
+        res.json({ success: true, settings: result.settings });
+        return;
+    }
+    res.status(400).json({
+        success: false,
+        requiresConfirmation: true,
+        message: result.message,
+        conflictingActivities: result.conflictingActivities,
+        code: 'REQUIRES_CONFIRMATION',
+    });
 });
 exports.default = router;
 //# sourceMappingURL=academy.js.map

@@ -13,6 +13,7 @@ const bills_1 = __importDefault(require("./routes/bills"));
 const dashboard_1 = __importDefault(require("./routes/dashboard"));
 const academy_1 = __importDefault(require("./routes/academy"));
 const errorHandler_1 = require("./middleware/errorHandler");
+const prisma_1 = require("./lib/prisma");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
@@ -24,6 +25,16 @@ app.get('/health', (_req, res) => {
         message: 'OK',
         timestamp: new Date().toISOString(),
     });
+});
+app.get('/db-test', async (_req, res) => {
+    try {
+        await prisma_1.prisma.$queryRaw `SELECT 1`;
+        res.json({ db: 'connected' });
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).json({ db: 'failed' });
+    }
 });
 app.use('/auth', auth_1.default);
 app.use('/courts', courts_1.default);

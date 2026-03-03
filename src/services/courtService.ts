@@ -22,6 +22,8 @@ export interface CourtSlot {
   start_time: string;
   end_time: string;
   activity: { id: string; name: string | null } | null;
+  /** True when this slot is outside the academy's opening_time–closing_time */
+  outside_working_hours?: boolean;
 }
 
 export interface CourtSlotsResult {
@@ -46,19 +48,26 @@ export async function getCourtSlots(
   const openMins = timeToMinutes(opening);
   const closeMins = timeToMinutes(closing);
 
+  const d = date ?? new Date();
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+
   const activities = await prisma.activity.findMany({
     where: { courtId, academyId, isActive: true },
-    select: { id: true, name: true, startTime: true, endTime: true },
+    select: { id: true, name: true, startTime: true, endTime: true, recurrenceDays: true },
   });
+
+  const activitiesOnThisDay = activities.filter((a) =>
+    a.recurrenceDays.includes(dayOfWeek)
+  );
 
   const slots: CourtSlot[] = [];
   for (let m = openMins; m + slotMins <= closeMins; m += slotMins) {
     const slotStart = m;
     const slotEnd = m + slotMins;
     let activity: CourtSlot['activity'] = null;
-    for (const a of activities) {
-      const aStart = timeToMinutes(a.startTime);
-      const aEnd = timeToMinutes(a.endTime);
+    for (const a of activitiesOnThisDay) {
+      const aStart = timeToMinutes(String(a.startTime).trim());
+      const aEnd = timeToMinutes(String(a.endTime).trim());
       if (slotStart < aEnd && slotEnd > aStart) {
         activity = { id: a.id, name: a.name };
         break;
@@ -68,10 +77,45 @@ export async function getCourtSlots(
       start_time: minutesToTime(slotStart),
       end_time: minutesToTime(slotEnd),
       activity,
+      outside_working_hours: false,
     });
   }
 
-  const d = date ?? new Date();
+  for (const a of activitiesOnThisDay) {
+    const aStart = timeToMinutes(String(a.startTime).trim());
+    const aEnd = timeToMinutes(String(a.endTime).trim());
+    const activityInfo: CourtSlot['activity'] = { id: a.id, name: a.name };
+
+    if (aStart < openMins) {
+      const segmentEnd = Math.min(aEnd, openMins);
+      if (segmentEnd > aStart) {
+        slots.push({
+          start_time: minutesToTime(aStart),
+          end_time: minutesToTime(segmentEnd),
+          activity: activityInfo,
+          outside_working_hours: true,
+        });
+      }
+    }
+    if (aEnd > closeMins) {
+      const segmentStart = Math.max(aStart, closeMins);
+      if (aEnd > segmentStart) {
+        slots.push({
+          start_time: minutesToTime(segmentStart),
+          end_time: minutesToTime(aEnd),
+          activity: activityInfo,
+          outside_working_hours: true,
+        });
+      }
+    }
+  }
+
+  slots.sort((x, y) => {
+    const xStart = timeToMinutes(x.start_time);
+    const yStart = timeToMinutes(y.start_time);
+    return xStart - yStart;
+  });
+
   const dateStr = d.toISOString().slice(0, 10);
 
   return {

@@ -205,10 +205,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"court_id\": \"{{courtId}}\",\n  \"name\": \"Morning Batch\",\n  \"start_time\": \"06:00\",\n  \"end_time\": \"07:00\",\n  \"start_date\": \"2025-01-01\",\n  \"monthly_fee\": 500,\n  \"max_players\": 20,\n  \"is_active\": true\n}"
+              "raw": "{\n  \"court_id\": \"{{courtId}}\",\n  \"name\": \"Morning Batch\",\n  \"start_time\": \"06:00\",\n  \"end_time\": \"07:00\",\n  \"recurrence_days\": [1, 3, 5],\n  \"start_date\": \"2025-01-01\",\n  \"monthly_fee\": 500,\n  \"max_players\": 20,\n  \"is_active\": true\n}"
             },
             "url": "{{baseUrl}}/activities",
-            "description": "court_id required (UUID). start_time/end_time HH:mm, start_date YYYY-MM-DD."
+            "description": "court_id required. recurrence_days optional: 0=Sun..6=Sat (default all days). Example [1,3,5]=Mon,Wed,Fri."
           }
         },
         {
@@ -251,7 +251,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Evening Batch\",\n  \"start_time\": \"18:00\",\n  \"end_time\": \"19:00\",\n  \"monthly_fee\": 600,\n  \"max_players\": 24,\n  \"is_active\": true\n}"
+              "raw": "{\n  \"name\": \"Evening Batch\",\n  \"start_time\": \"18:00\",\n  \"end_time\": \"19:00\",\n  \"recurrence_days\": [0, 6],\n  \"monthly_fee\": 600,\n  \"max_players\": 24,\n  \"is_active\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/activities/:id",

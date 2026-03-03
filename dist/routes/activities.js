@@ -45,6 +45,14 @@ const createValidation = [
     (0, express_validator_1.body)('name').optional().trim(),
     (0, express_validator_1.body)('start_time').trim().notEmpty().withMessage('start_time is required (HH:mm)'),
     (0, express_validator_1.body)('end_time').trim().notEmpty().withMessage('end_time is required (HH:mm)'),
+    (0, express_validator_1.body)('recurrence_days')
+        .optional()
+        .isArray()
+        .withMessage('recurrence_days must be an array'),
+    (0, express_validator_1.body)('recurrence_days.*')
+        .optional()
+        .isInt({ min: 0, max: 6 })
+        .withMessage('recurrence_days must be 0–6 (0=Sun, 6=Sat)'),
     (0, express_validator_1.body)('start_date').isISO8601().toDate().withMessage('start_date is required (YYYY-MM-DD)'),
     (0, express_validator_1.body)('monthly_fee').isFloat({ min: 0.01 }).withMessage('monthly_fee must be > 0'),
     (0, express_validator_1.body)('max_players').isInt({ min: 1 }).withMessage('max_players must be > 0'),
@@ -55,6 +63,8 @@ const updateValidation = [
     (0, express_validator_1.body)('name').optional().trim(),
     (0, express_validator_1.body)('start_time').optional().trim().notEmpty(),
     (0, express_validator_1.body)('end_time').optional().trim().notEmpty(),
+    (0, express_validator_1.body)('recurrence_days').optional().isArray(),
+    (0, express_validator_1.body)('recurrence_days.*').optional().isInt({ min: 0, max: 6 }),
     (0, express_validator_1.body)('monthly_fee').optional().isFloat({ min: 0.01 }),
     (0, express_validator_1.body)('max_players').optional().isInt({ min: 1 }),
     (0, express_validator_1.body)('is_active').optional().isBoolean(),
@@ -80,6 +90,7 @@ router.post('/', createValidation, async (req, res) => {
             name: req.body.name,
             startTime: req.body.start_time,
             endTime: req.body.end_time,
+            recurrenceDays: req.body.recurrence_days,
             startDate: new Date(req.body.start_date),
             monthlyFee: Number(req.body.monthly_fee),
             maxPlayers: Number(req.body.max_players),
@@ -143,6 +154,7 @@ router.put('/:id', updateValidation, async (req, res) => {
             name: req.body.name,
             startTime: req.body.start_time,
             endTime: req.body.end_time,
+            recurrenceDays: req.body.recurrence_days,
             monthlyFee: req.body.monthly_fee != null ? Number(req.body.monthly_fee) : undefined,
             maxPlayers: req.body.max_players != null ? Number(req.body.max_players) : undefined,
             isActive: req.body.is_active,

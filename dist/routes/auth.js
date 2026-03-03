@@ -37,18 +37,21 @@ const express_1 = require("express");
 const express_validator_1 = require("express-validator");
 const authService = __importStar(require("../services/authService"));
 const auth_1 = require("../middleware/auth");
+const asyncHandler_1 = require("../middleware/asyncHandler");
 const router = (0, express_1.Router)();
 const registerValidation = [
     (0, express_validator_1.body)('academyName').trim().notEmpty().withMessage('academyName is required'),
     (0, express_validator_1.body)('name').trim().notEmpty().withMessage('name is required'),
     (0, express_validator_1.body)('email').trim().isEmail().withMessage('Valid email is required'),
     (0, express_validator_1.body)('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    (0, express_validator_1.body)('openingTime').optional().trim().matches(/^\d{1,2}:\d{2}$/).withMessage('openingTime must be HH:mm'),
+    (0, express_validator_1.body)('closingTime').optional().trim().matches(/^\d{1,2}:\d{2}$/).withMessage('closingTime must be HH:mm'),
 ];
 const loginValidation = [
     (0, express_validator_1.body)('email').trim().isEmail().withMessage('Valid email is required'),
     (0, express_validator_1.body)('password').notEmpty().withMessage('Password is required'),
 ];
-router.post('/register', registerValidation, async (req, res) => {
+router.post('/register', registerValidation, (0, asyncHandler_1.asyncHandler)(async (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
         res.status(400).json({
@@ -65,6 +68,8 @@ router.post('/register', registerValidation, async (req, res) => {
             name: req.body.name,
             email: req.body.email,
             password: req.body.password,
+            openingTime: req.body.openingTime,
+            closingTime: req.body.closingTime,
         });
         res.status(201).json({ success: true, ...result });
     }
@@ -74,10 +79,10 @@ router.post('/register', registerValidation, async (req, res) => {
             res.status(400).json({ success: false, message: e.message, code: 'EMAIL_EXISTS' });
             return;
         }
-        throw err;
+        next(err);
     }
-});
-router.post('/login', loginValidation, async (req, res) => {
+}));
+router.post('/login', loginValidation, (0, asyncHandler_1.asyncHandler)(async (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
         res.status(400).json({
@@ -101,20 +106,20 @@ router.post('/login', loginValidation, async (req, res) => {
             res.status(401).json({ success: false, message: e.message, code: 'INVALID_CREDENTIALS' });
             return;
         }
-        throw err;
+        next(err);
     }
-});
-router.get('/me', auth_1.authMiddleware, async (req, res) => {
+}));
+router.get('/me', auth_1.authMiddleware, (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     if (!req.user) {
         res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
         return;
     }
-    const user = await authService.getMe(req.user.userId);
-    if (!user) {
+    const profile = await authService.getMe(req.user.userId);
+    if (!profile) {
         res.status(404).json({ success: false, message: 'User not found', code: 'NOT_FOUND' });
         return;
     }
-    res.json({ success: true, user });
-});
+    res.json({ success: true, profile });
+}));
 exports.default = router;
 //# sourceMappingURL=auth.js.map

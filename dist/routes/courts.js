@@ -87,6 +87,23 @@ router.get('/', [
     });
     res.json({ success: true, ...result });
 });
+router.get('/:id/slots', [
+    (0, express_validator_1.param)('id').isUUID().withMessage('Invalid court id'),
+    (0, express_validator_1.query)('date').optional().isISO8601().toDate().withMessage('date must be YYYY-MM-DD'),
+], async (req, res) => {
+    if (!req.user) {
+        res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
+        return;
+    }
+    const dateParam = req.query.date;
+    const date = dateParam ? new Date(dateParam) : undefined;
+    const result = await courtService.getCourtSlots(req.params.id, req.user.academyId, date);
+    if (!result) {
+        res.status(404).json({ success: false, message: 'Court not found', code: 'NOT_FOUND' });
+        return;
+    }
+    res.json({ success: true, ...result });
+});
 router.get('/:id', [(0, express_validator_1.param)('id').isUUID().withMessage('Invalid court id')], async (req, res) => {
     if (!req.user) {
         res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });

@@ -1,3 +1,20 @@
+export interface CourtSlot {
+    start_time: string;
+    end_time: string;
+    activity: {
+        id: string;
+        name: string | null;
+    } | null;
+}
+export interface CourtSlotsResult {
+    court: {
+        id: string;
+        name: string;
+    };
+    date: string;
+    slots: CourtSlot[];
+}
+export declare function getCourtSlots(courtId: string, academyId: string, date?: Date): Promise<CourtSlotsResult | null>;
 export interface CreateCourtInput {
     academyId: string;
     name: string;

@@ -1,11 +1,27 @@
 import { prisma } from '../lib/prisma';
 
+const DEFAULT_RECURRENCE_DAYS = [0, 1, 2, 3, 4, 5, 6]; // Sun–Sat
+
+/** Normalize to unique sorted 0–6 (Sunday=0, Saturday=6) */
+function normalizeRecurrenceDays(days: number[] | undefined): number[] {
+  if (!days || days.length === 0) return [...DEFAULT_RECURRENCE_DAYS];
+  const set = new Set(days.map((d) => Math.max(0, Math.min(6, Math.floor(Number(d))))));
+  return [...set].sort((a, b) => a - b);
+}
+
+/** True if two day arrays share at least one day */
+function shareRecurrenceDay(a: number[], b: number[]): boolean {
+  const set = new Set(b);
+  return a.some((d) => set.has(d));
+}
+
 export interface CreateActivityInput {
   academyId: string;
   courtId: string;
   name?: string;
   startTime: string; // HH:mm
   endTime: string;
+  recurrenceDays?: number[]; // 0=Sun ... 6=Sat
   startDate: Date;
   monthlyFee: number;
   maxPlayers: number;
@@ -16,6 +32,7 @@ export interface UpdateActivityInput {
   name?: string;
   startTime?: string;
   endTime?: string;
+  recurrenceDays?: number[];
   monthlyFee?: number;
   maxPlayers?: number;
   isActive?: boolean;
@@ -45,11 +62,12 @@ function overlaps(
   return s1 < e2 && s2 < e1;
 }
 
-/** Check if activity time range overlaps any existing activity on the same court */
+/** Check if activity time range overlaps any existing activity on the same court on shared recurrence days */
 export async function hasOverlap(
   courtId: string,
   startTime: string,
   endTime: string,
+  recurrenceDays: number[],
   excludeActivityId?: string
 ): Promise<boolean> {
   const start = timeToMinutes(startTime);
@@ -62,10 +80,11 @@ export async function hasOverlap(
       isActive: true,
       ...(excludeActivityId && { id: { not: excludeActivityId } }),
     },
-    select: { startTime: true, endTime: true },
+    select: { startTime: true, endTime: true, recurrenceDays: true },
   });
 
   for (const a of existing) {
+    if (!shareRecurrenceDay(recurrenceDays, a.recurrenceDays)) continue;
     if (overlaps(start, end, timeToMinutes(a.startTime), timeToMinutes(a.endTime))) {
       return true;
     }
@@ -92,9 +111,16 @@ export async function createActivity(input: CreateActivityInput) {
     throw err;
   }
 
-  const overlap = await hasOverlap(input.courtId, input.startTime, input.endTime);
+  const recurrenceDays = normalizeRecurrenceDays(input.recurrenceDays);
+
+  const overlap = await hasOverlap(
+    input.courtId,
+    input.startTime,
+    input.endTime,
+    recurrenceDays
+  );
   if (overlap) {
-    const err = new Error('Activity time overlaps with another activity on this court');
+    const err = new Error('Activity time overlaps with another activity on this court (on shared days)');
     (err as Error & { code?: string }).code = 'OVERLAP';
     throw err;
   }
@@ -115,6 +141,7 @@ export async function createActivity(input: CreateActivityInput) {
       name: input.name ?? null,
       startTime: input.startTime,
       endTime: input.endTime,
+      recurrenceDays,
       startDate: input.startDate,
       monthlyFee: input.monthlyFee,
       maxPlayers: input.maxPlayers,
@@ -164,6 +191,10 @@ export async function updateActivity(
   const startTime = input.startTime ?? activity.startTime;
   const endTime = input.endTime ?? activity.endTime;
   const courtId = input.courtId ?? activity.courtId;
+  const recurrenceDays =
+    input.recurrenceDays !== undefined
+      ? normalizeRecurrenceDays(input.recurrenceDays)
+      : activity.recurrenceDays;
 
   if (input.maxPlayers !== undefined && input.maxPlayers <= 0) {
     const err = new Error('max_players must be greater than 0');
@@ -183,9 +214,9 @@ export async function updateActivity(
     throw err;
   }
 
-  const overlap = await hasOverlap(courtId, startTime, endTime, id);
+  const overlap = await hasOverlap(courtId, startTime, endTime, recurrenceDays, id);
   if (overlap) {
-    const err = new Error('Activity time overlaps with another activity on this court');
+    const err = new Error('Activity time overlaps with another activity on this court (on shared days)');
     (err as Error & { code?: string }).code = 'OVERLAP';
     throw err;
   }
@@ -196,6 +227,7 @@ export async function updateActivity(
       ...(input.name !== undefined && { name: input.name }),
       ...(input.startTime !== undefined && { startTime: input.startTime }),
       ...(input.endTime !== undefined && { endTime: input.endTime }),
+      ...(input.recurrenceDays !== undefined && { recurrenceDays }),
       ...(input.monthlyFee !== undefined && { monthlyFee: input.monthlyFee }),
       ...(input.maxPlayers !== undefined && { maxPlayers: input.maxPlayers }),
       ...(input.isActive !== undefined && { isActive: input.isActive }),
