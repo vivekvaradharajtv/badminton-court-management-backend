@@ -153,12 +153,26 @@ export async function getCourtSlots(
     return xStart - yStart;
   });
 
+  const merged: CourtSlot[] = [];
+  for (const slot of slots) {
+    const last = merged[merged.length - 1];
+    const sameActivity =
+      last?.activity && slot.activity && last.activity.id === slot.activity.id;
+    const adjacent =
+      last && last.end_time === slot.start_time;
+    if (sameActivity && adjacent) {
+      last.end_time = slot.end_time;
+    } else {
+      merged.push({ ...slot });
+    }
+  }
+
   const dateStr = d.toISOString().slice(0, 10);
 
   return {
     court: { id: court.id, name: court.name },
     date: dateStr,
-    slots,
+    slots: merged,
   };
 }
 
