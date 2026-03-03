@@ -5,6 +5,12 @@ export interface CourtSlot {
         id: string;
         name: string | null;
     } | null;
+    /** True when this slot is outside the academy's opening_time–closing_time */
+    outside_working_hours?: boolean;
+    /** Days of week (0=Sun..6=Sat) when this slot has no activity */
+    available_days: number[];
+    /** Days of week when this slot is occupied by an activity */
+    occupied_days: number[];
 }
 export interface CourtSlotsResult {
     court: {
@@ -14,6 +20,20 @@ export interface CourtSlotsResult {
     date: string;
     slots: CourtSlot[];
 }
+export interface AvailableSlot {
+    start_time: string;
+    end_time: string;
+    available_days: number[];
+}
+export interface CourtWithAvailableSlots {
+    id: string;
+    name: string;
+    available_slots: AvailableSlot[];
+}
+export interface GetAvailableSlotsResult {
+    courts: CourtWithAvailableSlots[];
+}
+export declare function getAvailableSlotsForCourts(academyId: string, courtIds?: string[]): Promise<GetAvailableSlotsResult>;
 export declare function getCourtSlots(courtId: string, academyId: string, date?: Date): Promise<CourtSlotsResult | null>;
 export interface CreateCourtInput {
     academyId: string;

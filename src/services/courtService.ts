@@ -21,11 +21,12 @@ function minutesToTime(mins: number): string {
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 type ActivityRow = { id: string; name: string | null; startTime: string; endTime: string; recurrenceDays: number[] };
+type ActivityTimeRow = { startTime: string; endTime: string; recurrenceDays: number[] };
 
 function getOccupiedAndAvailableDays(
   slotStartMins: number,
   slotEndMins: number,
-  activities: ActivityRow[]
+  activities: ActivityTimeRow[]
 ): { occupied_days: number[]; available_days: number[] } {
   const occupiedSet = new Set<number>();
   for (const a of activities) {
@@ -58,6 +59,78 @@ export interface CourtSlotsResult {
   court: { id: string; name: string };
   date: string;
   slots: CourtSlot[];
+}
+
+export interface AvailableSlot {
+  start_time: string;
+  end_time: string;
+  available_days: number[];
+}
+
+export interface CourtWithAvailableSlots {
+  id: string;
+  name: string;
+  available_slots: AvailableSlot[];
+}
+
+export interface GetAvailableSlotsResult {
+  courts: CourtWithAvailableSlots[];
+}
+
+export async function getAvailableSlotsForCourts(
+  academyId: string,
+  courtIds?: string[]
+): Promise<GetAvailableSlotsResult> {
+  let courts: { id: string; name: string }[];
+  if (courtIds?.length) {
+    courts = await prisma.court.findMany({
+      where: { id: { in: courtIds }, academyId },
+      select: { id: true, name: true },
+    });
+  } else {
+    courts = await prisma.court.findMany({
+      where: { academyId },
+      select: { id: true, name: true },
+    });
+  }
+
+  const settings = await academyService.getAcademySettings(academyId);
+  const opening = settings?.opening_time ?? DEFAULT_OPENING;
+  const closing = settings?.closing_time ?? DEFAULT_CLOSING;
+  const slotMins = settings?.slot_duration ?? DEFAULT_SLOT_MINS;
+  const openMins = timeToMinutes(opening);
+  const closeMins = timeToMinutes(closing);
+
+  const result: CourtWithAvailableSlots[] = [];
+
+  for (const court of courts) {
+    const activities = await prisma.activity.findMany({
+      where: { courtId: court.id, academyId, isActive: true },
+      select: { startTime: true, endTime: true, recurrenceDays: true },
+    });
+
+    const available_slots: AvailableSlot[] = [];
+    for (let m = openMins; m + slotMins <= closeMins; m += slotMins) {
+      const slotStart = m;
+      const slotEnd = m + slotMins;
+      const { available_days } = getOccupiedAndAvailableDays(slotStart, slotEnd, activities);
+      if (available_days.length > 0) {
+        available_slots.push({
+          start_time: minutesToTime(slotStart),
+          end_time: minutesToTime(slotEnd),
+          available_days,
+        });
+      }
+    }
+
+    result.push({
+      id: court.id,
+      name: court.name,
+      available_slots,
+    });
+  }
+
+  return { courts: result };
 }
 
 export async function getCourtSlots(

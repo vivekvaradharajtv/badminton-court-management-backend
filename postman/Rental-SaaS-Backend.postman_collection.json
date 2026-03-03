@@ -139,6 +139,22 @@
           }
         },
         {
+          "name": "Get Available Slots (multi-court)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/courts/available-slots?court_ids=",
+              "host": ["{{baseUrl}}"],
+              "path": ["courts", "available-slots"],
+              "query": [
+                { "key": "court_ids", "value": "", "description": "Optional comma-separated court UUIDs; omit for all courts" }
+              ]
+            },
+            "description": "Returns available slots only for one or more courts. Each court has id, name, and available_slots (start_time, end_time, available_days). available_days: weekdays 0=Sun..6=Sat when that slot is free. Omit court_ids to get all courts."
+          }
+        },
+        {
           "name": "Get Court Slots",
           "request": {
             "method": "GET",

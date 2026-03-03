@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAvailableSlotsForCourts = getAvailableSlotsForCourts;
 exports.getCourtSlots = getCourtSlots;
 exports.createCourt = createCourt;
 exports.listCourts = listCourts;
@@ -53,6 +54,69 @@ function minutesToTime(mins) {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+function getOccupiedAndAvailableDays(slotStartMins, slotEndMins, activities) {
+    const occupiedSet = new Set();
+    for (const a of activities) {
+        const aStart = timeToMinutes(String(a.startTime).trim());
+        const aEnd = timeToMinutes(String(a.endTime).trim());
+        if (slotStartMins < aEnd && slotEndMins > aStart) {
+            for (const d of a.recurrenceDays) {
+                occupiedSet.add(d);
+            }
+        }
+    }
+    const occupied_days = [...occupiedSet].sort((a, b) => a - b);
+    const available_days = ALL_DAYS.filter((d) => !occupiedSet.has(d));
+    return { occupied_days, available_days };
+}
+async function getAvailableSlotsForCourts(academyId, courtIds) {
+    let courts;
+    if (courtIds?.length) {
+        courts = await prisma_1.prisma.court.findMany({
+            where: { id: { in: courtIds }, academyId },
+            select: { id: true, name: true },
+        });
+    }
+    else {
+        courts = await prisma_1.prisma.court.findMany({
+            where: { academyId },
+            select: { id: true, name: true },
+        });
+    }
+    const settings = await academyService.getAcademySettings(academyId);
+    const opening = settings?.opening_time ?? DEFAULT_OPENING;
+    const closing = settings?.closing_time ?? DEFAULT_CLOSING;
+    const slotMins = settings?.slot_duration ?? DEFAULT_SLOT_MINS;
+    const openMins = timeToMinutes(opening);
+    const closeMins = timeToMinutes(closing);
+    const result = [];
+    for (const court of courts) {
+        const activities = await prisma_1.prisma.activity.findMany({
+            where: { courtId: court.id, academyId, isActive: true },
+            select: { startTime: true, endTime: true, recurrenceDays: true },
+        });
+        const available_slots = [];
+        for (let m = openMins; m + slotMins <= closeMins; m += slotMins) {
+            const slotStart = m;
+            const slotEnd = m + slotMins;
+            const { available_days } = getOccupiedAndAvailableDays(slotStart, slotEnd, activities);
+            if (available_days.length > 0) {
+                available_slots.push({
+                    start_time: minutesToTime(slotStart),
+                    end_time: minutesToTime(slotEnd),
+                    available_days,
+                });
+            }
+        }
+        result.push({
+            id: court.id,
+            name: court.name,
+            available_slots,
+        });
+    }
+    return { courts: result };
 }
 async function getCourtSlots(courtId, academyId, date) {
     const court = await getCourtById(courtId, academyId);
@@ -84,17 +148,71 @@ async function getCourtSlots(courtId, academyId, date) {
                 break;
             }
         }
+        const { occupied_days, available_days } = getOccupiedAndAvailableDays(slotStart, slotEnd, activities);
         slots.push({
             start_time: minutesToTime(slotStart),
             end_time: minutesToTime(slotEnd),
             activity,
+            outside_working_hours: false,
+            occupied_days,
+            available_days,
         });
+    }
+    for (const a of activitiesOnThisDay) {
+        const aStart = timeToMinutes(String(a.startTime).trim());
+        const aEnd = timeToMinutes(String(a.endTime).trim());
+        const activityInfo = { id: a.id, name: a.name };
+        if (aStart < openMins) {
+            const segmentEnd = Math.min(aEnd, openMins);
+            if (segmentEnd > aStart) {
+                const { occupied_days, available_days } = getOccupiedAndAvailableDays(aStart, segmentEnd, activities);
+                slots.push({
+                    start_time: minutesToTime(aStart),
+                    end_time: minutesToTime(segmentEnd),
+                    activity: activityInfo,
+                    outside_working_hours: true,
+                    occupied_days,
+                    available_days,
+                });
+            }
+        }
+        if (aEnd > closeMins) {
+            const segmentStart = Math.max(aStart, closeMins);
+            if (aEnd > segmentStart) {
+                const { occupied_days, available_days } = getOccupiedAndAvailableDays(segmentStart, aEnd, activities);
+                slots.push({
+                    start_time: minutesToTime(segmentStart),
+                    end_time: minutesToTime(aEnd),
+                    activity: activityInfo,
+                    outside_working_hours: true,
+                    occupied_days,
+                    available_days,
+                });
+            }
+        }
+    }
+    slots.sort((x, y) => {
+        const xStart = timeToMinutes(x.start_time);
+        const yStart = timeToMinutes(y.start_time);
+        return xStart - yStart;
+    });
+    const merged = [];
+    for (const slot of slots) {
+        const last = merged[merged.length - 1];
+        const sameActivity = last?.activity && slot.activity && last.activity.id === slot.activity.id;
+        const adjacent = last && last.end_time === slot.start_time;
+        if (sameActivity && adjacent) {
+            last.end_time = slot.end_time;
+        }
+        else {
+            merged.push({ ...slot });
+        }
     }
     const dateStr = d.toISOString().slice(0, 10);
     return {
         court: { id: court.id, name: court.name },
         date: dateStr,
-        slots,
+        slots: merged,
     };
 }
 async function createCourt(input) {

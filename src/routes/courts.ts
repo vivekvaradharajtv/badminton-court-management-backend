@@ -66,6 +66,47 @@ router.get(
   }
 );
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+router.get(
+  '/available-slots',
+  [query('court_ids').optional().isString()],
+  async (req: Request, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        code: 'VALIDATION_ERROR',
+        errors: errors.array(),
+      });
+      return;
+    }
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
+      return;
+    }
+    let courtIds: string[] | undefined;
+    const raw = req.query.court_ids;
+    if (typeof raw === 'string' && raw.trim()) {
+      courtIds = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      const invalid = courtIds.filter((id) => !UUID_REGEX.test(id));
+      if (invalid.length > 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid court id(s); each must be a UUID',
+          code: 'VALIDATION_ERROR',
+        });
+        return;
+      }
+    }
+    const result = await courtService.getAvailableSlotsForCourts(
+      req.user.academyId,
+      courtIds
+    );
+    res.json({ success: true, courts: result.courts });
+  }
+);
+
 router.get(
   '/:id/slots',
   [
