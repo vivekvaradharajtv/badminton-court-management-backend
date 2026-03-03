@@ -67,9 +67,14 @@ router.get(
 );
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 router.get(
   '/available-slots',
-  [query('court_ids').optional().isString()],
+  [
+    query('court_ids').optional().isString(),
+    query('start_time').optional().matches(TIME_REGEX).withMessage('start_time must be HH:mm'),
+    query('hours').optional().isFloat({ min: 0.5, max: 24 }).toFloat().withMessage('hours must be 0.5–24'),
+  ],
   async (req: Request, res: Response): Promise<void> => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -99,10 +104,30 @@ router.get(
         return;
       }
     }
-    const result = await courtService.getAvailableSlotsForCourts(
-      req.user.academyId,
-      courtIds
-    );
+    const startTime = typeof req.query.start_time === 'string' ? req.query.start_time.trim() : undefined;
+    const hoursParam = req.query.hours;
+    const hours = hoursParam !== undefined && hoursParam !== '' ? Number(hoursParam) : undefined;
+    if (startTime != null && (hours == null || hours <= 0)) {
+      res.status(400).json({
+        success: false,
+        message: 'When start_time is provided, hours must be a positive number (0.5–24)',
+        code: 'VALIDATION_ERROR',
+      });
+      return;
+    }
+    if (hours != null && hours > 0 && !startTime) {
+      res.status(400).json({
+        success: false,
+        message: 'When hours is provided, start_time must be provided (HH:mm)',
+        code: 'VALIDATION_ERROR',
+      });
+      return;
+    }
+    const result = await courtService.getAvailableSlotsForCourts(req.user.academyId, {
+      courtIds,
+      startTime,
+      hours,
+    });
     res.json({ success: true, courts: result.courts });
   }
 );

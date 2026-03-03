@@ -144,14 +144,16 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
-              "raw": "{{baseUrl}}/courts/available-slots?court_ids=",
+              "raw": "{{baseUrl}}/courts/available-slots?court_ids=&start_time=14:00&hours=2",
               "host": ["{{baseUrl}}"],
               "path": ["courts", "available-slots"],
               "query": [
-                { "key": "court_ids", "value": "", "description": "Optional comma-separated court UUIDs; omit for all courts" }
+                { "key": "court_ids", "value": "", "description": "Optional comma-separated court UUIDs; omit for all courts" },
+                { "key": "start_time", "value": "14:00", "description": "Start of window (HH:mm); use with hours" },
+                { "key": "hours", "value": "2", "description": "Duration in hours (0.5–24); use with start_time" }
               ]
             },
-            "description": "Returns available slots only for one or more courts. Each court has id, name, and available_slots (start_time, end_time, available_days). available_days: weekdays 0=Sun..6=Sat when that slot is free. Omit court_ids to get all courts."
+            "description": "Returns available slots court-wise. Optional: court_ids; start_time + hours to filter slots in a time window (e.g. 14:00 for 2h). available_days: 0=Sun..6=Sat."
           }
         },
         {

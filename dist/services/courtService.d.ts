@@ -33,7 +33,14 @@ export interface CourtWithAvailableSlots {
 export interface GetAvailableSlotsResult {
     courts: CourtWithAvailableSlots[];
 }
-export declare function getAvailableSlotsForCourts(academyId: string, courtIds?: string[]): Promise<GetAvailableSlotsResult>;
+export interface GetAvailableSlotsOptions {
+    courtIds?: string[];
+    /** Start of window (HH:mm). When set with hours, only slots overlapping this window are returned. */
+    startTime?: string;
+    /** Duration in hours (e.g. 2 = 2 hours). Use with startTime to filter slots. */
+    hours?: number;
+}
+export declare function getAvailableSlotsForCourts(academyId: string, options?: GetAvailableSlotsOptions): Promise<GetAvailableSlotsResult>;
 export declare function getCourtSlots(courtId: string, academyId: string, date?: Date): Promise<CourtSlotsResult | null>;
 export interface CreateCourtInput {
     academyId: string;

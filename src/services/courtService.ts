@@ -77,10 +77,19 @@ export interface GetAvailableSlotsResult {
   courts: CourtWithAvailableSlots[];
 }
 
+export interface GetAvailableSlotsOptions {
+  courtIds?: string[];
+  /** Start of window (HH:mm). When set with hours, only slots overlapping this window are returned. */
+  startTime?: string;
+  /** Duration in hours (e.g. 2 = 2 hours). Use with startTime to filter slots. */
+  hours?: number;
+}
+
 export async function getAvailableSlotsForCourts(
   academyId: string,
-  courtIds?: string[]
+  options?: GetAvailableSlotsOptions
 ): Promise<GetAvailableSlotsResult> {
+  const { courtIds, startTime, hours } = options ?? {};
   let courts: { id: string; name: string }[];
   if (courtIds?.length) {
     courts = await prisma.court.findMany({
@@ -101,6 +110,17 @@ export async function getAvailableSlotsForCourts(
   const openMins = timeToMinutes(opening);
   const closeMins = timeToMinutes(closing);
 
+  let windowStartMins: number | null = null;
+  let windowEndMins: number | null = null;
+  if (startTime != null && startTime.trim() !== '' && hours != null && hours > 0) {
+    windowStartMins = Math.max(openMins, timeToMinutes(startTime.trim()));
+    windowEndMins = Math.min(closeMins, windowStartMins + Math.round(hours * 60));
+    if (windowEndMins <= windowStartMins) {
+      windowStartMins = null;
+      windowEndMins = null;
+    }
+  }
+
   const result: CourtWithAvailableSlots[] = [];
 
   for (const court of courts) {
@@ -113,6 +133,9 @@ export async function getAvailableSlotsForCourts(
     for (let m = openMins; m + slotMins <= closeMins; m += slotMins) {
       const slotStart = m;
       const slotEnd = m + slotMins;
+      if (windowStartMins != null && windowEndMins != null) {
+        if (slotEnd <= windowStartMins || slotStart >= windowEndMins) continue;
+      }
       const { available_days } = getOccupiedAndAvailableDays(slotStart, slotEnd, activities);
       if (available_days.length > 0) {
         available_slots.push({

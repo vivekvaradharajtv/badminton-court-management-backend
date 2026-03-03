@@ -71,7 +71,8 @@ function getOccupiedAndAvailableDays(slotStartMins, slotEndMins, activities) {
     const available_days = ALL_DAYS.filter((d) => !occupiedSet.has(d));
     return { occupied_days, available_days };
 }
-async function getAvailableSlotsForCourts(academyId, courtIds) {
+async function getAvailableSlotsForCourts(academyId, options) {
+    const { courtIds, startTime, hours } = options ?? {};
     let courts;
     if (courtIds?.length) {
         courts = await prisma_1.prisma.court.findMany({
@@ -91,6 +92,16 @@ async function getAvailableSlotsForCourts(academyId, courtIds) {
     const slotMins = settings?.slot_duration ?? DEFAULT_SLOT_MINS;
     const openMins = timeToMinutes(opening);
     const closeMins = timeToMinutes(closing);
+    let windowStartMins = null;
+    let windowEndMins = null;
+    if (startTime != null && startTime.trim() !== '' && hours != null && hours > 0) {
+        windowStartMins = Math.max(openMins, timeToMinutes(startTime.trim()));
+        windowEndMins = Math.min(closeMins, windowStartMins + Math.round(hours * 60));
+        if (windowEndMins <= windowStartMins) {
+            windowStartMins = null;
+            windowEndMins = null;
+        }
+    }
     const result = [];
     for (const court of courts) {
         const activities = await prisma_1.prisma.activity.findMany({
@@ -101,6 +112,10 @@ async function getAvailableSlotsForCourts(academyId, courtIds) {
         for (let m = openMins; m + slotMins <= closeMins; m += slotMins) {
             const slotStart = m;
             const slotEnd = m + slotMins;
+            if (windowStartMins != null && windowEndMins != null) {
+                if (slotEnd <= windowStartMins || slotStart >= windowEndMins)
+                    continue;
+            }
             const { available_days } = getOccupiedAndAvailableDays(slotStart, slotEnd, activities);
             if (available_days.length > 0) {
                 available_slots.push({
